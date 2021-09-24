@@ -1,0 +1,47 @@
+---
+title: Windows Solidworks-Comsol
+cluster: "academic"
+attributes:
+  node_type: null
+  bc_num_slots: null
+  semester: FALL2021
+  custom_time:
+    label: "Allocated Time (expressed in MM , or HH:MM:SS , or DD-HH:MM)."
+    value: "04:00:00"
+    widget: text_field
+  bc_queue: "kvm"
+  bc_num_hours: null
+  custom_memory_per_node: 32
+  custom_num_cores: 8
+  custom_num_gpus: 0
+  base_image:
+    label: Base Windows image
+    widget: select
+    options:
+      -  ["Windows SEAS Solidworks Comsol", "SEAS/seas_win_sw_comsol_05.qcow2"]
+  custom_newimage:
+    label: "Start from a new copy of the image"
+    widget: check_box
+    value: 0
+    help: |
+          **_Selecting this checkbox will ignore copies of VM images you might have from previous jobs and will start the job from a brand new copy of the base image you selected in the menu above._**
+
+          When this option is *not* selected the system will attempt to boot the VM image you ran in your previous job. This will make your VM image persistent from job to job.
+
+          If you run into issues, for example if you made modifications to your image and something went wrong and now it does not work correctly any more, or for whatever other reason you would like to start from scratch, please select the checkbox to ignore previous images and start from a brand new copy of the VM.
+
+  imagefile: null
+
+form:
+  - bc_num_slots
+  - semester
+  - node_type
+  - bc_queue
+  - custom_memory_per_node
+  - custom_num_cores
+  - custom_num_gpus
+  - bc_num_hours
+  - custom_time
+  - base_image
+  - custom_newimage
+  - imagefile

@@ -1,0 +1,70 @@
+---
+title: Windows VMs
+cluster: "academic"
+attributes:
+  node_type: null
+  bc_num_slots: null
+  semester: FALL2021
+  custom_time:
+    label: "Allocated Time (expressed in MM , or HH:MM:SS , or DD-HH:MM)."
+    value: "04:00:00"
+    widget: text_field
+  bc_queue: "kvm"
+  bc_num_hours: null
+  custom_memory_per_node:
+    label: Memory Allocation in GB
+    value: 4
+    min: 4
+    step: 1
+    max: 250
+    widget: number_field
+  custom_num_cores:
+    label: Number of cores
+    value: 1
+    min: 1
+    step: 1
+    max: 64
+    widget: number_field
+    help: "Number of Cpus per task"
+  custom_num_gpus: 0
+  base_image:
+    label: Base Windows image
+    widget: select
+    options:
+      - [ "Windows SEAS Solidworks", "SEAS/seas_win_sw_05.qcow2" ]
+      - [ "Windows SEAS Solidworks AutoDesk", "SEAS/seas_win_sw_ad_05.qcow2" ]
+      - [ "Windows SEAS Solidworks Comsol", "SEAS/seas_win_sw_comsol_05.qcow2" ]
+      - [ "Windows SEAS Solidworks Comsol Granta", "SEAS/seas_win_sw_comsol_granta_05.qcow2" ]
+      - [ "Basic FAS-RC Image", "FAS-RC/fasrc-base_05.qcow2" ]
+  custom_newimage:
+    label: "Start from a new copy of the image"
+    widget: check_box
+    value: 0
+    help: |
+          **_Selecting this checkbox will ignore copies of VM images you might have from previous jobs and will start the job from a brand new copy of the base image you selected in the menu above._**
+
+          When this option is *not* selected the system will attempt to boot the VM image you ran in your previous job. This will make your VM image persistent from job to job.
+
+          If you run into issues, for example if you made modifications to your image and something went wrong and now it does not work correctly any more, or for whatever other reason you would like to start from scratch, please select the checkbox to ignore previous images and start from a brand new copy of the VM.
+
+  imagefile:
+    label: windows VM image file (advanced option)
+    widget: text_field
+    help: |
+          If you want to use your own custom image instead of selectig from the menu above, please provide the full path to a vaid qcow2 image.
+
+          Please note that if the image is not already in the designated VM_SCRATCH folder, it will be copied there at runtime. That might take a considerable amount of time, so please be patient.
+
+form:
+  - bc_num_slots
+  - semester
+  - node_type
+  - bc_queue
+  - custom_memory_per_node
+  - custom_num_cores
+  - custom_num_gpus
+  - bc_num_hours
+  - custom_time
+  - base_image
+  - custom_newimage
+  - imagefile

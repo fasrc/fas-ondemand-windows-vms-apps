@@ -1,0 +1,18 @@
+set -x 
+port=$(find_port localhost 7000 11000 )
+password="$(create_passwd 16)"
+vncport=$(find_port localhost 5901 5950 )
+display=$((vncport - 5900))
+serviceport=$(find_port localhost 7000 11000 )
+nginxport=$(find_port localhost 7000 11000 )
+
+export port
+export password
+export vncport
+export display
+export serviceport
+export nginxport
+export VNC_DISPLAY=${display}
+export VNC_PASSWORD=${password}
+export monitorport=$nginxport
+export windowspassword='JqA8SFAbTBG4cYeh'

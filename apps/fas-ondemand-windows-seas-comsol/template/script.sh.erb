@@ -1,0 +1,218 @@
+#!/usr/bin/env bash
+
+echo "XXXX start executing the script XXXX"
+set -x
+umask 0022
+
+## set the variables for the work environment
+export SEMESTER=<%= context.semester %>
+export GROUPNAME=$(id -g -n $USER )
+export VMSCRATCH=/n/holyscratch01/Academic-cluster/${SEMESTER}/${GROUPNAME}/VM_SCRATCH
+export VMIMAGES_REPO=/n/holystore01/VM_IMAGES
+
+## check if this folder exists. This cannot be created by the user, must be created by the admins
+if ! [ -d $VMSCRATCH ] ; then
+  echo "ERROR: folder $VMSCRATCH does not exist or is not accessible"
+  exit 1
+fi
+
+export BASEWORKDIR=$VMSCRATCH/$USER
+mkdir -p $BASEWORKDIR/{data,images} 
+export DATA_DIR=$BASEWORKDIR/data
+export IMAGE_DIR=$BASEWORKDIR/images
+## make the user image folder striped 
+lfs setstripe -c 16 $IMAGE_DIR
+# workdir for this particular job
+export WORKDIR=$BASEWORKDIR/$SLURM_JOB_ID
+mkdir -p $WORKDIR && cd $WORKDIR
+
+## get the base image from the form and set options 
+#NOTE: at the moment we are using images originated from the same base image, so all params will be the same. 
+export BASEIMAGE=${VMIMAGES_REPO}/<%= context.base_image %>
+bootmode="legacy"
+drivers="virtio"
+connection="vnc"
+access="direct"
+
+## in future parameters can be specialized for different images in here  if needed 
+<%- case context.base_image
+  when "SEAS/seas_win_sw_05.qcow2" %>
+  <%= imagetype = "seas_win_sw" %>
+  <% when "SEAS/seas_win_sw_ad_05.qcow2" %>
+  <%= imagetype = "seas_win_sw_ad" %>
+  <% when "SEAS/seas_win_sw_comsol_05.qcow2" %>
+  <%= imagetype = "seas_win_sw_comsol" %>
+  <% when "SEAS/seas_win_sw_comsol_granta_05.qcow2" %>
+  <%= imagetype = "seas_win_sw_comsol_granta" %>
+  <% when "FAS-RC/fasrc-base_05.qcow2" %>
+  <%= imagetype = "fasrc_base" %>
+<% end -%>
+IMAGE_DIR=$IMAGE_DIR/<%= imagetype %>
+
+mkdir -p $IMAGE_DIR
+
+# unless user requeste not to do it we will try to use a previous image
+<%- if context.custom_newimage.to_i.zero? -%>
+echo "verify that we are entering here"
+# check if there is already a current image
+if [ -f $IMAGE_DIR/current_image.qcow2 ] ; then 
+  ## check that the image is ok
+  qemu-img  check -q -f qcow2 $IMAGE_DIR/current_image.qcow2
+  if [ $? -eq 0  ] ; then
+    #previous image looks ok, let's try to use that
+    export IMAGE_FILE=$IMAGE_DIR/current_image.qcow2
+     echo "INFO: the existing curent image looks ok, we will use that"
+  else
+     echo "WARNING: user requested to resume from previous image, but the file had issues, so we'll start from a fresh copy"
+     printf "The file was : "
+     readlink $IMAGE_DIR/current_image.qcow2
+     rm -f $IMAGE_DIR/current_image.qcow2
+  fi
+else
+  echo "WARNING: user requested to resume from previous image, but no previous current_image.qcow2 image was found for this image type"
+fi
+
+<%- end -%>
+
+
+## if users provide their own image, check and use that image
+<%- unless context.imagefile.blank? -%>
+if [ -f <%= context.imagefile.to_s %> ] ; then 
+  qemu-img  check -q -f qcow2 <%= context.imagefile.to_s %>
+  if [ $? -eq 0  ] ; then
+    # the supplied image looks ok, let's use that one
+    export IMAGE_FILE=<%= context.imagefile.to_s %>
+    export BASEIMAGE=$IMAGE_FILE
+    export USERIMAGE=1
+    bootmode="legacy"
+    drivers="virtio"
+    connection="vnc"
+    access="direct"
+  else
+    echo "WARNING: user provided image <%= context.imagefile.to_s %> is not valid, so we'll start from a fresh copy"
+else
+  echo "ERROR: you selected to use the file <%= context.imagefile.to_s %> as image, but it is not accessible "
+fi
+<%- end -%>
+
+
+## If IMAGE_FILE is not defined, we need to start from scratch 
+if [ -z ${IMAGE_FILE} ]; then
+  export IMAGE_FILE=$IMAGE_DIR/vm_${SLURM_JOB_ID}.qcow2
+  (cd $IMAGE_DIR ; rm -f current_image.qcow2 ; ln -s vm_${SLURM_JOB_ID}.qcow2 current_image.qcow2 )
+fi
+
+## this should be a better check that if the image file is ok or not 
+[ ! -f $IMAGE_FILE ] && /usr/bin/qemu-img create -f qcow2 -b $BASEIMAGE $IMAGE_FILE
+
+KVM=kvm-operator
+
+setfacl -R  -b $DATA_DIR $IMAGE_DIR
+setfacl -R  -b $DATA_DIR $IMAGE_DIR 
+for myfol in $DATA_DIR $IMAGE_DIR
+do
+  ## reset standard permissions
+  find $myfol -type d -exec chmod 2770 '{}' \;
+  find $myfol -type f -exec chmod 660 '{}' \;
+  find $myfol -name "*sh"  -exec chmod 770 '{}' \;
+
+  ## set rules for folders (both default and actual rules)
+  find $myfol -type d -exec setfacl -m d:u::rwx,d:g::rwx,d:o::---,d:m::rwx,d:u:$KVM:rwx,d:u:$USER:rwx,u::rwx,g::rwx,o::---,m::rwx,u:$KVM:rwx,u:$USER:rwx '{}' \;
+  ## set rules for files
+  find $myfol -type f -exec setfacl -m u::rwx,g::rwx,o::---,m::rwx,u:$USER:rwx,u:$KVM:rwx '{}' \;
+done
+
+## For the time being I will skip launching the web nonitoring tool, re-enable and adjust later if needed
+### startup the monitoring service
+##
+##service_container_image=/scratch/local-software/script-server/script-server_dev-fasrc-2020-07-24-f5171e8d9de8.sif
+##mkdir -p $WORKDIR/{conf,logs,runners,scripts,temp}
+##find $WORKDIR/scripts -type d -exec setfacl -m d:u::rwx,d:g::rwx,d:o::---,d:m::rwx,d:u:$KVM:rwx,d:u:$USER:rwx,u::rwx,g::rwx,o::---,m::rwx,u:$KVM:rwx,u:$USER:rwx '{}' \;
+##
+#### configuration file
+##cat > $WORKDIR/conf/conf.json <<EOF
+##{
+##  "port": ${serviceport},
+##  "title": "VM Monitor Manager",
+##  "address": "127.0.0.1",
+##  "auth": {
+##    "type": "htpasswd",
+##    "htpasswd_path": "conf/.htpasswd"
+##  }
+##}
+##EOF
+#### service files
+##cat > $WORKDIR/runners/poweroff.json <<EOF
+##{
+##  "name": "Poweroff VM",
+##  "description": "Click here to poweroff VM",
+##  "script_path": "/app/scripts/poweroff_VM.sh"
+##}
+##EOF
+#### script files
+##cat > $WORKDIR/scripts/poweroff_VM.sh <<EOF
+###!/bin/bash
+##echo "Powering off VM"
+##EOF
+##
+##chmod +x $WORKDIR/scripts/poweroff_VM.sh
+##
+##htpasswd -b -c $WORKDIR/conf/.htpasswd $USER $password
+##
+##singularity  exec --pwd=/app \
+##                  -B $WORKDIR/conf/conf.json:/app/conf/conf.json \
+##                  -B $WORKDIR/conf/.htpasswd:/app/conf/.htpasswd \
+##                  -B $WORKDIR/runners:/app/conf/runners \
+##                  -B $WORKDIR/scripts:/app/scripts \
+##                  -B $WORKDIR/temp:/app/temp \
+##                  -B $WORKDIR/logs:/app/logs \
+##                  -B /var/qemu/sockets/ \
+##                  $service_container_image python3 launcher.py &
+##
+#### Nginx
+##nginx_container_image=/scratch/local-software/nginx/nginx_latest.sif
+##mkdir -p $WORKDIR/nginx/{log,run,cache}
+##myhost=`hostname`
+##
+##cat > nginx/nginx.conf <<EOF
+##server {
+##        listen ${nginxport};
+##        server_name ${myhost};
+##location ^~ /node/${myhost}/${nginxport}/ {
+##                proxy_pass_header Server;
+##                proxy_set_header Host \$proxy_host;
+##                proxy_set_header X-Real-IP \$remote_addr;
+##                proxy_set_header X-Scheme \$scheme;
+##                proxy_set_header X-Forwarded-For   \$proxy_add_x_forwarded_for;
+##                proxy_pass http://127.0.0.1:${serviceport}/;
+##
+##                # needed for websockets
+##                proxy_http_version 1.1;
+##                proxy_set_header Upgrade \$http_upgrade;
+##                proxy_set_header Connection "upgrade";
+##                proxy_set_header Origin http://\$proxy_host;
+##        }
+##}
+##EOF
+##
+##singularity run  \
+##                -B $WORKDIR/nginx/nginx.conf:/etc/nginx/conf.d/default.conf  \
+##                -B $WORKDIR/nginx/log:/var/log/nginx                  \
+##                -B $WORKDIR/nginx/run:/var/run                        \
+##                -B $WORKDIR/nginx/cache:/var/cache/nginx              \
+##                $nginx_container_image &
+##
+#### end monitoring tool
+
+## this is sent to a subshell in background in order to delay that till after the VM is started 
+(
+echo "running this in background"
+sleep 60
+export PYTHONPATH="/opt/websockify/lib/python2.7/site-packages:$PYTHONPATH"
+${WEBSOCKIFY_CMD:-/opt/websockify/bin/run} -D ${port} localhost:${vncport}
+echo "ready to connect"
+) &
+
+#sudo -u kvm-operator /opt/secretcommands/start-vm-for-user.sh -i $IMAGE_FILE  -s $DATA_DIR -b $bootmode -d $drivers -c $connection -m $WORKDIR/scripts -a $access
+sudo -u kvm-operator /opt/secretcommands/start-vm-for-user.sh -i $IMAGE_FILE  -s $DATA_DIR -b $bootmode -d $drivers -c $connection -a $access
+

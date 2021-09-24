@@ -1,0 +1,121 @@
+{
+    "apps": [
+        {
+            "app_name": "fas-ondemand-windows-fasrc-base",
+            "cpu": {
+                "value": 1,
+                "select": true,
+                "min": 1,
+                "max": 64
+            },
+            "memory": {
+                "value": 4,
+                "select": true,
+                "min": 4,
+                "max": 250
+            },
+            "title": "Windows VM - RC Base",
+            "name": "Windows VM - RC Base"
+        },
+        {
+            "app_name": "fas-ondemand-windows-seas-solidworks",
+            "cpu": {
+                "value": 8,
+                "select": false
+            },
+            "memory": {
+                "value": 32,
+                "select": false
+            },
+            "title": "Windows Solidworks",
+            "name": "Windows Solidworks",
+            "vm_image": {
+                "select": false,
+                "base_image": [ "Windows SEAS Solidworks", "SEAS/seas_win_sw_05.qcow2" ]
+            }
+        },
+        {
+            "app_name": "fas-ondemand-windows-seas-comsol",
+            "cpu": {
+                "value": 8,
+                "select": false
+            },
+            "memory": {
+                "value": 32,
+                "select": false
+            },
+            "title": "Windows Solidworks-Comsol",
+            "name": "Windows Solidworks-Comsol",
+            "vm_image": {
+                "select": false,
+                "base_image": [ "Windows SEAS Solidworks Comsol", "SEAS/seas_win_sw_comsol_05.qcow2" ]
+            }
+        },
+        {
+            "app_name": "fas-ondemand-windows-seas-autodesk",
+            "cpu": {
+                "value": 8,
+                "select": false
+            },
+            "memory": {
+                "value": 32,
+                "select": false
+            },
+            "title": "Windows Solidworks-Autodesk",
+            "name": "Windows Solidworks-Autodesk",
+            "vm_image": {
+                "select": false,
+                "base_image": [ "Windows SEAS Solidworks AutoDesk", "SEAS/seas_win_sw_ad_05.qcow2" ]
+            }
+        },
+        {
+            "app_name": "fas-ondemand-windows-seas-granta",
+            "cpu": {
+                "value": 8,
+                "select": false
+            },
+            "memory": {
+                "value": 32,
+                "select": false
+            },
+            "title": "Windows Solidworks-Comsol-Granta",
+            "name": "Windows Solidworks-Comsol-Granta",
+            "vm_image": {
+                "select": false,
+                "base_image": [ "Windows SEAS Solidworks Comsol Granta", "SEAS/seas_win_sw_comsol_granta_05.qcow2" ]
+            }
+        },
+        {
+            "app_name": "fas-ondemand-windows-all",
+            "cpu": {
+                "value": 1,
+                "select": true,
+                "min": 1,
+                "max": 64
+            },
+            "memory": {
+                "value": 4,
+                "select": true,
+                "min": 4,
+                "max": 250
+            },
+            "title": "Windows VMs",
+            "name": "Windows VMs",
+            "vm_image": {
+                "select": true
+            },
+            "use_custom_image_file": true
+        }
+    ],
+    "base": {
+        "app_type": "windows_vms",
+        "git_branch": "master",
+        "git_dir": "fas-ondemand-windows-vms",
+        "git_url": "https://github.com/fasrc/fas-ondemand-windows-vms.git",
+        "vm_image": {
+            "select": false,
+            "base_image": [ "Basic FAS-RC Image", "FAS-RC/fasrc-base_05.qcow2" ]
+        },
+        "use_custom_image_file": false
+    }
+}

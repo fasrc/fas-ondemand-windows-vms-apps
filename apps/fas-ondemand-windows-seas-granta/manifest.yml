@@ -1,0 +1,10 @@
+---
+name: Windows Solidworks-Comsol-Granta
+icon: fa://desktop
+category: Interactive Apps
+subcategory: Desktops
+role: batch_connect
+description: |
+  This form will launch an interactive Windows VM session on a node on the FAS-OnDemand Cluster
+
+  Please enter the time you want to allocate for the job, and use the checkbox to indicate if you would like a fresh copy of the VM or carry over your previous image.
